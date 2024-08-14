@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Signup.css";
 
@@ -8,6 +9,7 @@ function Signup() {
   const [password, setPassword] = useState();
   const [message, setMessage] = useState();
   const [err, setErr] = useState();
+  const navigate = useNavigate();
 
   const Submit = (e) => {
     e.preventDefault();
@@ -18,6 +20,7 @@ function Signup() {
         setMessage(result.data.message);
         if (result.data.message === "Account created succesfully") {
           setErr(false);
+          navigate("/login");
         } else if (result.data.message === "Already has an account") {
           setErr(true);
         }

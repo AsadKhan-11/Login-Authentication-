@@ -26,11 +26,23 @@ app.post("/login", (req, res) => {
   UserModel.findOne({ email: email })
     .then((user) => {
       if (user) {
-        if (user.password === password) {
-          res.json({ message: "Succesfull", result: user });
-        } else {
-          res.json({ message: "Incorrect password" });
-        }
+        bcrypt.compare(password, user.password, (err, isMatch) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ message: "Error comparing passwords", error: err });
+          }
+          if (isMatch) {
+            const token = jwt.sign({ email: user.email }, "jwt-secret", {
+              expiresIn: "1d",
+            });
+
+            res.cookie("token", token);
+            return res.json({ message: "Successful", result: user });
+          } else {
+            return res.json({ message: "Incorrect password", result: user });
+          }
+        });
       } else {
         res.json({ message: "No such Id exists" });
       }
@@ -43,18 +55,18 @@ app.post("/login", (req, res) => {
 app.post("/createUser", (req, res) => {
   const { name, email, password } = req.body;
 
-  UserModel.findOne({ email: email }).then((user) => {
-    bcrypt
-      .hash(password, 10)
-      .then((response) => {
-        if (response) {
-          if (user) {
-            return res.json({ message: "Already has an account" });
-          } else {
-            UserModel.create({ name: name, email: email, password: response })
+  UserModel.findOne({ email: email })
+    .then((user) => {
+      if (user) {
+        return res.json({ message: "Already has an account" });
+      } else {
+        bcrypt
+          .hash(password, 10)
+          .then((hash) => {
+            UserModel.create({ name: name, email: email, password: hash })
               .then((result) => {
                 res.json({
-                  message: "Account created succesfully",
+                  message: "Account created successfully",
                   response: result,
                 });
               })
@@ -63,13 +75,18 @@ app.post("/createUser", (req, res) => {
                   .status(500)
                   .json({ message: "Cannot create user", error: err });
               });
-          }
-        }
-      })
-      .catch((err) => {
-        console.log("error while creating hash", err);
-      });
-  });
+          })
+          .catch((err) => {
+            console.log("Error while creating hash", err);
+            res
+              .status(500)
+              .json({ message: "Error creating hash", error: err });
+          });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({ message: "Error finding user", error: err });
+    });
 });
 
 app.listen(8000, () => {
