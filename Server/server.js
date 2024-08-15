@@ -21,6 +21,22 @@ mongoose.connect(
   "mongodb+srv://mrasad10khan:mongodb@cluster0.yz0l1cn.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0"
 );
 
+const verifyUser = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.json("The token is not available");
+  } else {
+    jwt.verify(token, "jwt-secret", (err, respond) => {
+      if (err) return res.json("Token is wrong");
+      next();
+    });
+  }
+};
+
+app.get("/home", verifyUser, (req, res) => {
+  return res.json("Success");
+});
+
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   UserModel.findOne({ email: email })
